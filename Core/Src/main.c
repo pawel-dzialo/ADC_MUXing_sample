@@ -89,10 +89,11 @@ int flagone = 1;
 int flagtwo = 1;
 int pin = 0;
 int flipped = 1;
+int flagger = 0;
 uint8_t RXone_Data[4] = {0,0,0,0};
 uint8_t RXtwo_Data[4] = {0,0,0,0};
 int milis = 0;
-
+int counter = 0; //sample counter
 
 void setDataReady(){
 	if(flipped){
@@ -115,8 +116,12 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef * hspi)
 {
     if(pin){
     	if(flagtwo){
-    		milis = HAL_GetTick() - milis;
+    		if(counter>50){
+    		milis = HAL_GetTick() - milis; //get time for 1k samples
     		flagtwo = 0;
+    		flagger = 1;
+    		}
+    		counter +=1;
     	}
     	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
     	pin = 0;
@@ -182,7 +187,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
   //int milis = HAL_GetTick();
-  int flagger = 1;
+
   int time = 0;
   /* USER CODE END 2 */
 
@@ -196,14 +201,15 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	 memcpy(RXone_Data_local, &RXone_Data, 4);
+	 memcpy(RXone_Data_local, &RXone_Data, 4); //just copy the data into scope so it can be viewed in debugger
 	 memcpy(RXtwo_Data_local, &RXtwo_Data, 4);
 	 if(flagger){
 		 //HAL_SPI_Receive(&hspi1, RX_Data, sizeof(RX_Data), 5000);
-		 HAL_Delay(5000);
+		 //HAL_Delay(5000);
 		 time = milis;
-		// milis = HAL_GetTick();
 		 flagger = 0;
+		// milis = HAL_GetTick();
+		 //flagger = 0;
 	 }
 	 //if(received){
 		// xd = 1;
@@ -561,7 +567,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -601,7 +607,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -640,7 +646,7 @@ static void MX_TIM3_Init(void)
   htim3.Instance = TIM3;
   htim3.Init.Prescaler = 0;
   htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 50;
+  htim3.Init.Period = 2;
   htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
@@ -663,7 +669,7 @@ static void MX_TIM3_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 23;
+  sConfigOC.Pulse = 1;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_ENABLE;
   if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)

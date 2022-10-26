@@ -90,6 +90,8 @@ int flagtwo = 1;
 int pin = 0;
 int flipped = 1;
 int flagger = 0;
+int dataonewritten = 0;
+int datatwowritten = 0;
 uint8_t RXone_Data[4] = {0,0,0,0};
 uint8_t RXtwo_Data[4] = {0,0,0,0};
 int milis = 0;
@@ -116,7 +118,7 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef * hspi)
 {
     if(pin){
     	if(flagtwo){
-    		if(counter>50){
+    		if(counter>1000){
     		milis = HAL_GetTick() - milis; //get time for 1k samples
     		flagtwo = 0;
     		flagger = 1;
@@ -125,11 +127,13 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef * hspi)
     	}
     	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_RESET);
     	pin = 0;
+    	dataonewritten = 1;
     	flipped = 1;
     }
     else{
     	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);
     	pin = 1;
+    	datatwowritten = 1;
     	flipped = 1;
     }
 }
@@ -180,8 +184,11 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_USB_Init();
   /* USER CODE BEGIN 2 */
-  uint8_t RXone_Data_local[4];
-  uint8_t RXtwo_Data_local[4];
+  uint8_t RXone_Data_local[1024] = {0};
+  int pointerone = 0;
+  uint8_t RXtwo_Data_local[1024] = {0};
+  int pointertwo = 0;
+
   //int xd = 0;
   HAL_TIM_Base_Start(&htim3);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4);
@@ -201,6 +208,16 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	 if(dataonewritten&&pointerone<1024){
+		 memcpy(RXone_Data_local + pointerone, &RXone_Data, 4);
+		 pointerone +=4;
+		 dataonewritten = 0;
+	 }
+	 if(datatwowritten&&pointertwo<1024){
+		 memcpy(RXtwo_Data_local + pointertwo, &RXtwo_Data, 4);
+		 pointertwo +=4;
+		 datatwowritten = 0;
+	 }
 	 memcpy(RXone_Data_local, &RXone_Data, 4); //just copy the data into scope so it can be viewed in debugger
 	 memcpy(RXtwo_Data_local, &RXtwo_Data, 4);
 	 if(flagger){
@@ -265,8 +282,8 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV16;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV16;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV4;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV8;
 
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_5) != HAL_OK)
   {
@@ -416,7 +433,7 @@ static void MX_I2C1_Init(void)
 
   /* USER CODE END I2C1_Init 1 */
   hi2c1.Instance = I2C1;
-  hi2c1.Init.Timing = 0x00101B29;
+  hi2c1.Init.Timing = 0x007074AF;
   hi2c1.Init.OwnAddress1 = 0;
   hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
@@ -464,7 +481,7 @@ static void MX_I2C2_Init(void)
 
   /* USER CODE END I2C2_Init 1 */
   hi2c2.Instance = I2C2;
-  hi2c2.Init.Timing = 0x00101B29;
+  hi2c2.Init.Timing = 0x007074AF;
   hi2c2.Init.OwnAddress1 = 0;
   hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
   hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
